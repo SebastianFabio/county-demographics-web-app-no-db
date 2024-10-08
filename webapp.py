@@ -8,29 +8,32 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    states = get_states()
+    states = get_state_options()
     #print(states)
-    return render_template('home.html', states=states)
+    return render_template('home.html', state_options=states)
 
 @app.route('/showFact')
 def render_fact():
-    states = get_states()
+    states = get_state_options()
     state = request.args.get('state')
     county = county_most_under_18(state)
+    countyP = most_populated_county(state)
     fact = "In " + state + ", the county with the highest percentage of under 18 year olds is " + county + "."
-    return render_template('home.html', states=states, funFact=fact)
-    
-def get_states():
-    """Return a list of state abbreviations from the demographic data."""
+    fact2= "In " + state + ", the most populated county is "+countyP+"."
+    return render_template('home.html', state_options=states, funFact=fact, funfun=fact2)
+   
+def get_state_options():
+    """Return the html code for the drop down menu.  Each option is a state abbreviation from the demographic data."""
     with open('demographics.json') as demographics_data:
         counties = json.load(demographics_data)
-    #states=[]
-    #for c in counties:
-        #if c["State"] not in states:
-            #states.append(c["State"])
-    #a more concise but less flexible and less easy to read version is below.
-    states=list(set([c["State"] for c in counties])) #sets do not allow duplicates and the set function is optimized for removing duplicates
-    return states
+    states=[]
+    for c in counties:
+        if c["State"] not in states:
+            states.append(c["State"])
+    options=""
+    for s in states:
+        options += Markup("<option value=\"" + s + "\">" + s + "</option>") #Use Markup so <, >, " are not escaped lt, gt, etc.
+    return options
 
 def county_most_under_18(state):
     """Return the name of a county in the given state with the highest percent of under 18 year olds."""
@@ -44,7 +47,18 @@ def county_most_under_18(state):
                 highest = c["Age"]["Percent Under 18 Years"]
                 county = c["County"]
     return county
-
+def most_populated_county(state):
+    """Return the highest population."""
+    with open('demographics.json') as demographics_data:
+        counties = json.load(demographics_data)
+    highest=0
+    for c in counties:
+        if c["State"] == state:
+            if c["Population"]["2014 Population"] > highest:
+                highest = c["Population"]["2014 Population"]
+                countyP = c["County"]
+    return countyP  
+   
 def is_localhost():
     """ Determines if app is running on localhost or not
     Adapted from: https://stackoverflow.com/questions/17077863/how-to-see-if-a-flask-app-is-being-run-on-localhost
